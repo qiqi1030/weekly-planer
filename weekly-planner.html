@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Planner</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+    user-select: none;
+  }
+
+  body {
+    background: linear-gradient(135deg, #ede9fe, #fce7f3, #dbeafe, #ede9fe);
+    background-size: 400% 400%;
+    animation: bodyFlow 8s ease infinite;
+  }
+  @keyframes bodyFlow {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .widget {
+    width: 420px;
+    max-height: calc(100vh - 40px);
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.12),
+      0 2px 8px rgba(0,0,0,0.06),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* -- Header / drag handle ----------------------------------------- */
+  .header {
+    padding: 12px 14px 10px;
+    cursor: move;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    flex-shrink: 0;
+    -webkit-app-region: drag;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: 0.5px;
+  }
+  .header h1 span { color: #6c63ff; }
+  .header-sub {
+    font-size: 12px;
+    color: #888;
+    font-weight: 400;
+    -webkit-app-region: no-drag;
+    padding: 0 4px;
+  }
+  .header-countdown {
+    font-size: 11px;
+    color: #6c63ff;
+    font-weight: 600;
+    text-align: center;
+    padding: 2px 0;
+    -webkit-app-region: no-drag;
+    cursor: pointer;
+    transition: all .2s;
+    border-radius: 6px;
+  }
+  .header-countdown:hover { background: rgba(108,99,255,0.06); }
+  .clear-btn {
+    background: none;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #999;
+    cursor: pointer;
+    transition: all .2s;
+    -webkit-app-region: no-drag;
+  }
+  .clear-btn:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #ef4444;
+  }
+
+  /* -- Window controls --------------------------------------------- */
+  .win-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    -webkit-app-region: no-drag;
+  }
+  .win-ctrl-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .2s;
+  }
+  .win-ctrl-btn:hover { background: rgba(0,0,0,0.06); color: #333; }
+  .win-ctrl-btn.close:hover { background: #ef4444; color: #fff; }
+  .win-ctrl-btn.pin-on { color: #6c63ff; }
+  .win-ctrl-btn.pin-on:hover { background: rgba(108,99,255,0.12); }
+
+  /* -- Routine button & panel -------------------------------------- */
+  .routine-toggle-area {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    -webkit-app-region: no-drag;
+  }
+  .routine-switch {
+    width: 44px;
+    height: 24px;
+    background: #e0e0e0;
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    -webkit-app-region: no-drag;
+    flex-shrink: 0;
+  }
+  .routine-switch.on {
+    background: #6c63ff;
+  }
+  .routine-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .routine-switch.on::after {
+    transform: translateX(20px);
+  }
+
+  .routine-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.35s ease,
+                padding 0.35s ease;
+    opacity: 0;
+    padding: 0 22px;
+    flex-shrink: 0;
+  }
+  .routine-panel.open {
+    max-height: 120px;
+    opacity: 1;
+    padding: 10px 22px 14px;
+  }
+  .routine-panel-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+  }
+  .routine-picker-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .routine-picker-group label {
+    font-size: 11px;
+    color: #888;
+    font-weight: 500;
+  }
+  .routine-picker-group select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(108,99,255,0.06);
+    border: 1px solid rgba(108,99,255,0.15);
+    border-radius: 10px;
+    padding: 6px 14px 6px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.25s;
+    min-width: 70px;
+    text-align: center;
+  }
+  .routine-picker-group select:hover {
+    background: rgba(108,99,255,0.1);
+    border-color: #6c63ff;
+  }
+  .routine-picker-group select:focus {
+    border-color: #6c63ff;
+    box-shadow: 0 0 0 3px rgba(108,99,255,0.15);
+  }
+  .routine-connector {
+    font-size: 16px;
+    color: #bbb;
+    padding-top: 18px;
+  }
+
+  /* -- Day tabs (sidebar) ------------------------------------------ */
+  .layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 6px 8px 10px;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(0,0,0,0.04);
+  }
+  .day-tab {
+    padding: 6px 0;
+    width: 32px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .25s;
+    color: #999;
+    background: transparent;
+    border: none;
+    position: relative;
+    writing-mode: horizontal-tb;
+  }
+  .day-tab:hover { background: rgba(108,99,255,0.08); color: #555; }
+  .day-tab.active {
+    background: #6c63ff;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(108,99,255,0.3);
+  }
+  .day-tab.today {
+    color: #6c63ff;
+  }
+  .day-tab.active.today {
+    color: #fff;
+  }
+  .day-tab .dot {
+    position: absolute;
+    top: 2px; right: 3px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #6c63ff;
+  }
+
+  /* -- Timeline ----------------------------------------------------- */
+  .timeline-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px 16px;
+    scroll-behavior: smooth;
+  }
+  .timeline-wrap::-webkit-scrollbar { width: 5px; }
+  .timeline-wrap::-webkit-scrollbar-track { background: transparent; }
+  .timeline-wrap::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+  .hour-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 2px;
+    border-radius: 10px;
+    padding: 4px 8px;
+    transition: background .2s;
+    min-height: 40px;
+  }
+  .hour-row:hover { background: rgba(0,0,0,0.03); }
+  .hour-row.now {
+    background: rgba(108,99,255,0.07);
+    border-left: 3px solid #6c63ff;
+  }
+
+  .hour-label {
+    width: 52px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #999;
+    padding-top: 6px;
+    flex-shrink: 0;
+    text-align: right;
+    margin-right: 12px;
+  }
+  .hour-row.now .hour-label { color: #6c63ff; font-weight: 700; }
+
+  .plans-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* -- Single plan item --------------------------------------------- */
+  .plan-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px 5px 4px;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.03);
+    transition: all .25s;
+    animation: fadeIn .25s ease;
+  }
+  .plan-item:hover { background: rgba(0,0,0,0.06); }
+
+  .plan-item input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 17px; height: 17px;
+    border: 2px solid #bbb;
+    border-radius: 5px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all .2s;
+    position: relative;
+  }
+  .plan-item input[type="checkbox"]:checked {
+    background: #6c63ff;
+    border-color: #6c63ff;
+  }
+  .plan-item input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .plan-text {
+    flex: 1;
+    font-size: 14px;
+    color: #1a1a2e;
+    transition: all .3s;
+    word-break: break-word;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+  .plan-text.done {
+    color: #c0c0c0 !important;
+    text-decoration: line-through;
+  }
+
+  .plan-del {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 4px;
+    transition: all .2s;
+    flex-shrink: 0;
+    opacity: 0;
+  }
+  .plan-item:hover .plan-del { opacity: 1; }
+  .plan-del:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+
+  /* -- Add plan input ----------------------------------------------- */
+  .add-plan-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .add-plan-form input {
+    flex: 1;
+    border: none;
+    background: rgba(108,99,255,0.06);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+    outline: 1px solid transparent;
+    transition: all .2s;
+    color: #333;
+  }
+  .add-plan-form input:focus {
+    outline-color: #6c63ff;
+    background: rgba(108,99,255,0.1);
+  }
+  .add-plan-form input::placeholder { color: #bbb; font-size: 12px; }
+
+  .add-btn-icon {
+    background: none;
+    border: none;
+    color: #6c63ff;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 6px;
+    transition: all .2s;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .add-btn-icon:hover { background: rgba(108,99,255,0.12); }
+
+  /* -- Empty state -------------------------------------------------- */
+  .empty-msg {
+    font-size: 12px;
+    color: #ccc;
+    padding: 4px 0;
+  }
+
+  /* -- Footer ------------------------------------------------------- */
+  .footer {
+    padding: 8px 16px 10px;
+    border-top: 1px solid rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .footer .daily-quote {
+    font-size: 11px;
+    color: #333;
+    line-height: 1.5;
+    font-style: italic;
+    text-align: center;
+  }
+  .footer .stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #aaa;
+  }
+  .footer .stats-row .stats strong { color: #6c63ff; }
+
+  /* -- Countdown --------------------------------------------------- */
+  .countdown-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+    margin-top: 2px;
+  }
+  .countdown-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #888;
+    background: rgba(108,99,255,0.06);
+    border-radius: 6px;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: all .2s;
+    max-width: 100%;
+  }
+  .countdown-tag:hover { background: rgba(108,99,255,0.12); }
+  .countdown-tag .num {
+    font-weight: 700;
+    color: #6c63ff;
+    font-size: 11px;
+  }
+  .countdown-tag .del {
+    font-size: 12px;
+    color: #ccc;
+    cursor: pointer;
+    line-height: 1;
+    margin-left: 2px;
+  }
+  .countdown-tag .del:hover { color: #ef4444; }
+  .countdown-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: rgba(108,99,255,0.06);
+    color: #6c63ff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all .2s;
+    line-height: 1;
+  }
+  .countdown-add:hover { background: rgba(108,99,255,0.15); }
+
+  /* -- Animations --------------------------------------------------- */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideDown {
+    from { opacity: 0; max-height: 0; }
+    to   { opacity: 1; max-height: 200px; }
+  }
+
+  /* -- Dialog overlay ----------------------------------------------- */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn .2s ease;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 24px 20px;
+    width: 340px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+    animation: slideDown .25s ease;
+  }
+  .modal-box h3 {
+    font-size: 17px;
+    margin-bottom: 16px;
+    color: #1a1a2e;
+  }
+  .modal-box input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    transition: border .2s;
+    box-sizing: border-box;
+  }
+  .modal-box input:focus { border-color: #6c63ff; }
+  /* -- Date picker wheels ------------------------------------------- */
+  .date-picker-row {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0;
+    justify-content: center;
+  }
+  .date-picker-row select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(108,99,255,0.06);
+    border: 1px solid rgba(108,99,255,0.15);
+    border-radius: 10px;
+    padding: 8px 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a2e;
+    cursor: pointer;
+    outline: none;
+    text-align: center;
+    transition: all .2s;
+  }
+  .date-picker-row select:hover { border-color: #6c63ff; background: rgba(108,99,255,0.1); }
+  .date-picker-row select:focus { border-color: #6c63ff; box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
+  .date-picker-row .sel-year { width: 80px; }
+  .date-picker-row .sel-month { width: 64px; }
+  .date-picker-row .sel-day { width: 64px; }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: flex-end;
+  }
+  .modal-actions button {
+    padding: 8px 20px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .modal-actions .btn-cancel {
+    background: #f0f0f0;
+    color: #666;
+  }
+  .modal-actions .btn-cancel:hover { background: #e5e5e5; }
+  .modal-actions .btn-confirm {
+    background: #6c63ff;
+    color: #fff;
+  }
+  .modal-actions .btn-confirm:hover { background: #5b52e0; }
+</style>
+</head>
+<body>
+
+<div class="widget" id="widget">
+  <!-- Header -->
+  <div class="header" id="dragHandle">
+    <div style="text-align:center;font-size:11px;color:#888;margin-bottom:4px;-webkit-app-region:no-drag" id="liveClock"></div>
+    <div class="header-top">
+      <div class="header-left">
+        <h1>📋 Weekly<span> Planner</span></h1>
+        <div class="win-controls" id="winControls">
+          <button class="win-ctrl-btn pin-on" id="pinBtn" title="切换置顶">📌</button>
+          <button class="win-ctrl-btn" id="minBtn" title="最小化">─</button>
+          <button class="win-ctrl-btn close" id="closeBtn" title="关闭到托盘">✕</button>
+        </div>
+      </div>
+      <div class="routine-toggle-area">
+        <span class="routine-switch" id="routineSwitch"></span>
+        <span style="font-size:11px;color:#999;white-space:nowrap">Sleep</span>
+        <button class="clear-btn" id="clearDayBtn" title="Clear all plans for today">Clear</button>
+      </div>
+    </div>
+    <div class="header-sub" id="headerSub"></div>
+    <div class="header-countdown" id="headerCountdown"></div>
+  </div>
+
+  <!-- Day tabs (sidebar) + Timeline -->
+  <div class="layout">
+    <div class="sidebar" id="dayTabs">
+      <button class="day-tab" data-day="0">M</button>
+      <button class="day-tab" data-day="1">T</button>
+      <button class="day-tab" data-day="2">W</button>
+      <button class="day-tab" data-day="3">T</button>
+      <button class="day-tab" data-day="4">F</button>
+      <button class="day-tab" data-day="5">S</button>
+      <button class="day-tab" data-day="6">S</button>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-wrap" id="timelineWrap">
+    <!-- Rows injected by JS -->
+    </div>
+  </div> <!-- end layout -->
+
+  <!-- Routine panel (collapsible) -->
+  <div class="routine-panel" id="routinePanel">
+    <div class="routine-panel-inner">
+      <div class="routine-picker-group">
+        <label>🛌 Wake</label>
+        <select id="wakeupHour"></select>
+      </div>
+      <span class="routine-connector">→</span>
+      <div class="routine-picker-group">
+        <label>🌙 Sleep</label>
+        <select id="sleepHour"></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="daily-quote" id="dailyQuote">⏳ 正在加载今日名言...</div>
+    <div class="countdown-wrap" id="countdownWrap">
+      <!-- injected by JS -->
+    </div>
+    <div class="stats-row">
+      <span id="alarmStatus">🔔</span>
+      <span class="stats">Done: <strong id="doneCount">0</strong> / <strong id="totalCount">0</strong></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <h3 id="modalTitle">📝 Add Plan</h3>
+    <input type="text" id="modalInput" placeholder="Enter plan content..." maxlength="100" autofocus />
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-confirm" id="modalConfirm">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Countdown Modal -->
+<div class="modal-overlay" id="cdModalOverlay">
+  <div class="modal-box">
+    <h3>⏳ Add Countdown</h3>
+    <input type="text" id="cdModalInput" placeholder="Event name" maxlength="50" />
+    <div class="date-picker-row">
+      <select class="sel-year" id="cdYear"></select>
+      <select class="sel-month" id="cdMonth"></select>
+      <select class="sel-day" id="cdDay"></select>
+    </div>
+    <div class="date-picker-row">
+      <select class="sel-year" id="cdYear"></select>
+      <select class="sel-month" id="cdMonth"></select>
+      <select class="sel-day" id="cdDay"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cdModalCancel">Cancel</button>
+      <button class="btn-confirm" id="cdModalConfirm">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ---- Data -------------------------------------------------------
+  const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const STORAGE_KEY = 'weekly_planner_v2';
+  let plans = {};      // { dayIdx: { hour: [ {id, text, done} ] } }
+  let currentDay = new Date().getDay(); // 0=Sun, 1=Mon... 6=Sat
+  if (currentDay === 0) currentDay = 6; // convert to Mon(0)-Sun(6)
+  else currentDay -= 1;
+
+  let idCounter = Date.now();
+
+  // ---- DOM refs ---------------------------------------------------
+  const timelineWrap = document.getElementById('timelineWrap');
+  const dayTabs = document.getElementById('dayTabs');
+  const doneCountEl = document.getElementById('doneCount');
+  const totalCountEl = document.getElementById('totalCount');
+  const clearDayBtn = document.getElementById('clearDayBtn');
+  const headerSub = document.getElementById('headerSub');
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalInput = document.getElementById('modalInput');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalCancel = document.getElementById('modalCancel');
+  const modalConfirm = document.getElementById('modalConfirm');
+
+  // ---- Modal state ------------------------------------------------
+  let modalCallback = null;
+
+  function openModal(title, placeholder, cb) {
+    modalTitle.textContent = title;
+    modalInput.placeholder = placeholder || '输入计划内容…';
+    modalInput.value = '';
+    modalOverlay.classList.add('show');
+    setTimeout(() => modalInput.focus(), 100);
+    modalCallback = cb;
+  }
+  function closeModal() {
+    modalOverlay.classList.remove('show');
+    modalCallback = null;
+  }
+  modalCancel.addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) closeModal();
+  });
+  modalInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') modalConfirm.click();
+    if (e.key === 'Escape') closeModal();
+  });
+  modalConfirm.addEventListener('click', () => {
+    const val = modalInput.value.trim();
+    if (!val) return;
+    if (modalCallback) modalCallback(val);
+    closeModal();
+  });
+
+  // ---- Persistence ------------------------------------------------
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+    } catch(e) {}
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) plans = JSON.parse(raw);
+    } catch(e) { plans = {}; }
+    // ensure structure
+    for (let d = 0; d < 7; d++) {
+      if (!plans[d]) plans[d] = {};
+    }
+  }
+
+  // ---- CRUD -------------------------------------------------------
+  function getPlansFor(day, hour) {
+    if (!plans[day]) plans[day] = {};
+    if (!plans[day][hour]) plans[day][hour] = [];
+    return plans[day][hour];
+  }
+
+  function addPlan(day, hour, text) {
+    const list = getPlansFor(day, hour);
+    list.push({ id: ++idCounter, text, done: false });
+    save();
+    render();
+  }
+
+  function togglePlan(day, hour, planId) {
+    const list = getPlansFor(day, hour);
+    const p = list.find(x => x.id === planId);
+    if (p) { p.done = !p.done; save(); render(); }
+  }
+
+  function deletePlan(day, hour, planId) {
+    const list = getPlansFor(day, hour);
+    plans[day][hour] = list.filter(x => x.id !== planId);
+    save();
+    render();
+  }
+
+  function clearDay(day) {
+    plans[day] = {};
+    save();
+    render();
+  }
+
+  function stats() {
+    let total = 0, done = 0;
+    const dayPlans = plans[currentDay] || {};
+    for (const h in dayPlans) {
+      dayPlans[h].forEach(p => {
+        total++;
+        if (p.done) done++;
+      });
+    }
+    return { total, done };
+  }
+
+  // ---- Render -----------------------------------------------------
+  function render() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const todayDay = now.getDay() === 0 ? 6 : now.getDay() - 1;
+
+    // Build rows
+    let html = '';
+    var wakeHour = getWakeHour();
+    var sleepHourVal = getSleepHour();
+    var routineOn = isRoutineOn();
+    for (let h = 0; h < 24; h++) {
+      // 如果作息模式开启且在睡眠时间段内，跳过该小时
+      if (routineOn && wakeHour < sleepHourVal) {
+        if (h < wakeHour || h >= sleepHourVal) continue;
+      } else if (routineOn && wakeHour > sleepHourVal) {
+        // 跨天睡眠（如23点睡8点起）
+        if (h >= sleepHourVal && h < wakeHour) continue;
+      }
+
+      const isNow = (currentDay === todayDay && h === currentHour);
+      const hourLabel = `${String(h).padStart(2,'0')}:00`;
+      const planList = plans[currentDay]?.[h] || [];
+
+      html += `<div class="hour-row ${isNow ? 'now' : ''}" data-hour="${h}">`;
+      html += `<div class="hour-label">${hourLabel}</div>`;
+      html += `<div class="plans-area">`;
+
+      if (planList.length === 0) {
+        html += `<div class="empty-msg">— 空闲 —</div>`;
+      } else {
+        planList.forEach(p => {
+          html += `<div class="plan-item" data-id="${p.id}">`;
+          html += `<input type="checkbox" ${p.done ? 'checked' : ''} />`;
+          html += `<span class="plan-text ${p.done ? 'done' : ''}">${escapeHtml(p.text)}</span>`;
+          html += `<button class="plan-del" title="删除">✕</button>`;
+          html += `</div>`;
+        });
+      }
+
+      // Add button
+      html += `<div class="add-plan-form">`;
+      html += `<button class="add-btn-icon" title="添加计划">＋</button>`;
+      html += `</div>`;
+
+      html += `</div></div>`;
+    }
+    timelineWrap.innerHTML = html;
+
+    // ---- Attach events --------------------------------------------
+
+    // Checkbox toggle
+    timelineWrap.querySelectorAll('.plan-item input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        const item = e.target.closest('.plan-item');
+        const hour = parseInt(item.closest('.hour-row').dataset.hour);
+        const id = parseInt(item.dataset.id);
+        togglePlan(currentDay, hour, id);
+      });
+    });
+
+    // Delete
+    timelineWrap.querySelectorAll('.plan-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const item = e.target.closest('.plan-item');
+        const hour = parseInt(item.closest('.hour-row').dataset.hour);
+        const id = parseInt(item.dataset.id);
+        deletePlan(currentDay, hour, id);
+      });
+    });
+
+    // Add (modal)
+    timelineWrap.querySelectorAll('.add-btn-icon').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const row = e.target.closest('.hour-row');
+        const hour = parseInt(row.dataset.hour);
+        openModal(
+          `📝 ${hourLabel(hour)} Add Plan`,
+          '输入计划内容…',
+          (text) => addPlan(currentDay, hour, text)
+        );
+      });
+    });
+
+    // Click text to edit (toggle for now, could enhance)
+    timelineWrap.querySelectorAll('.plan-text').forEach(el => {
+      el.addEventListener('dblclick', (e) => {
+        const item = e.target.closest('.plan-item');
+        const hour = parseInt(item.closest('.hour-row').dataset.hour);
+        const id = parseInt(item.dataset.id);
+        const oldText = plans[currentDay]?.[hour]?.find(p => p.id === id)?.text || '';
+        openModal('✏️ Edit Plan', oldText, (text) => {
+          const list = plans[currentDay]?.[hour];
+          const p = list?.find(x => x.id === id);
+          if (p) { p.text = text; save(); render(); }
+        });
+      });
+    });
+
+    // Day tabs
+    dayTabs.querySelectorAll('.day-tab').forEach(tab => {
+      const day = parseInt(tab.dataset.day);
+      tab.classList.toggle('active', day === currentDay);
+      tab.classList.toggle('today', day === todayDay);
+      // dot indicator
+      const hasPlans = plans[day] && Object.keys(plans[day]).some(h => plans[day][h].length > 0);
+      const dot = tab.querySelector('.dot') || (() => { const d = document.createElement('span'); d.className='dot'; tab.appendChild(d); return d; })();
+      dot.style.display = hasPlans ? 'block' : 'none';
+    });
+
+    // Stats
+    const s = stats();
+    doneCountEl.textContent = s.done;
+    totalCountEl.textContent = s.total;
+
+    // Scroll to current hour
+    if (currentDay === todayDay) {
+      const nowRow = timelineWrap.querySelector('.hour-row.now');
+      if (nowRow) {
+        nowRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    } else {
+      timelineWrap.scrollTop = 0;
+    }
+
+    // Clear btn
+    clearDayBtn.style.display = s.total > 0 ? 'block' : 'none';
+  }
+
+  // ---- Routine (作息安排) -----------------------------------------
+  var routineEnabled = false;
+  var routineWake = 7;
+  var routineSleep = 23;
+
+  function isRoutineOn() { return routineEnabled; }
+  function getWakeHour() { return routineWake; }
+  function getSleepHour() { return routineSleep; }
+
+  function initRoutinePickers() {
+    var wakeSel = document.getElementById('wakeupHour');
+    var sleepSel = document.getElementById('sleepHour');
+    for (var i = 0; i < 24; i++) {
+      var opt1 = document.createElement('option');
+      opt1.value = i;
+      opt1.textContent = String(i).padStart(2,'0') + ':00';
+      var opt2 = document.createElement('option');
+      opt2.value = i;
+      opt2.textContent = String(i).padStart(2,'0') + ':00';
+      wakeSel.appendChild(opt1);
+      sleepSel.appendChild(opt2);
+    }
+    wakeSel.value = routineWake;
+    sleepSel.value = routineSleep;
+  }
+
+  function loadRoutineState() {
+    try {
+      var v = localStorage.getItem('routine_state');
+      if (v) {
+        var data = JSON.parse(v);
+        routineEnabled = data.enabled || false;
+        routineWake = data.wake !== undefined ? data.wake : 7;
+        routineSleep = data.sleep !== undefined ? data.sleep : 23;
+      }
+    } catch(e) {}
+    // 同步选择器
+    var wakeSel = document.getElementById('wakeupHour');
+    var sleepSel = document.getElementById('sleepHour');
+    if (wakeSel) wakeSel.value = routineWake;
+    if (sleepSel) sleepSel.value = routineSleep;
+    // 同步开关状态
+    var sw = document.getElementById('routineSwitch');
+    if (sw) sw.classList.toggle('on', routineEnabled);
+    // 同步面板
+    var panel = document.getElementById('routinePanel');
+    if (panel) panel.classList.toggle('open', routineEnabled);
+  }
+
+  function saveRoutineState() {
+    try {
+      localStorage.setItem('routine_state', JSON.stringify({
+        enabled: routineEnabled,
+        wake: routineWake,
+        sleep: routineSleep
+      }));
+    } catch(e) {}
+  }
+
+  // ---- Helpers ----------------------------------------------------
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+  function hourLabel(h) {
+    return `${String(h).padStart(2,'0')}:00`;
+  }
+
+  // ---- No JS drag needed - Electron handles it natively via -webkit-app-region: drag
+
+  // ---- Alarm System -----------------------------------------------
+  let alarmInterval = null;
+  let lastAlarmHour = -1;
+  let alarmEnabled = true;
+
+  // 生成嘀嘀嘀提示音（用 AudioContext 合成）
+  function playBeep() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var now = ctx.currentTime;
+      var beeps = [
+        { t: 0,     freq: 880, dur: 0.12 },
+        { t: 0.16,  freq: 880, dur: 0.12 },
+        { t: 0.32,  freq: 880, dur: 0.12 },
+        { t: 0.52,  freq: 1100, dur: 0.35 }
+      ];
+      beeps.forEach(function(b) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(b.freq, now + b.t);
+        gain.gain.setValueAtTime(0.3, now + b.t);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + b.t + b.dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + b.t);
+        osc.stop(now + b.t + b.dur + 0.05);
+      });
+    } catch(e) {}
+  }
+
+  // 显示整点提醒横幅
+  function showAlarmBanner(hour) {
+    var banner = document.createElement('div');
+    banner.style.cssText = [
+      'position: fixed',
+      'top: 20px',
+      'left: 50%',
+      'transform: translateX(-50%)',
+      'background: linear-gradient(135deg, #6c63ff, #a855f7)',
+      'color: #fff',
+      'padding: 14px 28px',
+      'border-radius: 14px',
+      'font-size: 15px',
+      'font-weight: 600',
+      'box-shadow: 0 8px 32px rgba(108,99,255,0.4)',
+      'z-index: 9999',
+      'animation: slideDown 0.3s ease',
+      'display: flex',
+      'align-items: center',
+      'gap: 10px',
+      'pointer-events: none'
+    ].join(';');
+    banner.innerHTML = '🔔 <strong>' + String(hour).padStart(2,'0') + ':00</strong> Time to check your plans!';
+    document.body.appendChild(banner);
+    setTimeout(function() {
+      banner.style.transition = 'opacity 0.5s';
+      banner.style.opacity = '0';
+      setTimeout(function() { banner.remove(); }, 500);
+    }, 3500);
+  }
+
+  function updateAlarmUI() {
+    var el = document.getElementById('alarmStatus');
+    if (alarmEnabled) {
+      el.textContent = '🔔 Alarm';
+      el.style.cursor = 'pointer';
+      el.style.color = '#6c63ff';
+    } else {
+      el.textContent = '🔇 Alarm Off';
+      el.style.cursor = 'pointer';
+      el.style.color = '#ccc';
+    }
+  }
+
+  // 点击闹钟状态文字切换
+  function toggleAlarm() {
+    alarmEnabled = !alarmEnabled;
+    updateAlarmUI();
+    saveAlarmState();
+  }
+  document.getElementById('alarmStatus').addEventListener('click', toggleAlarm);
+
+  function loadAlarmState() {
+    try {
+      var v = localStorage.getItem('alarm_enabled');
+      if (v !== null) alarmEnabled = v === 'true';
+    } catch(e) {}
+    updateAlarmUI();
+  }
+  function saveAlarmState() {
+    try { localStorage.setItem('alarm_enabled', alarmEnabled ? 'true' : 'false'); } catch(e) {}
+  }
+
+  // 整点定时检查
+  function startAlarm() {
+    if (alarmInterval) clearInterval(alarmInterval);
+    alarmInterval = setInterval(function() {
+      var now = new Date();
+      var h = now.getHours();
+      var m = now.getMinutes();
+      var today = now.getDay() === 0 ? 6 : now.getDay() - 1;
+      if (currentDay !== today) return;
+      if (!alarmEnabled) return;
+      if (m === 0 && h !== lastAlarmHour) {
+        var planList = (plans[today] && plans[today][h]) || [];
+        var hasUndone = planList.some(function(p) { return !p.done; });
+        if (planList.length > 0 && hasUndone) {
+          lastAlarmHour = h;
+          playBeep();
+          showAlarmBanner(h);
+        }
+      }
+      if (m > 0) lastAlarmHour = -1;
+    }, 10000);
+  }
+
+  // ---- Daily Quote ------------------------------------------------
+  var QUOTES = [
+    'The journey of a thousand miles begins with a single step. — Lao Tzu',
+    'It does not matter how slowly you go as long as you do not stop. — Confucius',
+    'Success is not final, failure is not fatal: it is the courage to continue that counts. — Churchill',
+    'The only way to do great work is to love what you do. — Steve Jobs',
+    'In the middle of difficulty lies opportunity. — Einstein',
+    'Believe you can and you are halfway there. — Theodore Roosevelt',
+    'Act as if what you do makes a difference. It does. — William James',
+    'What you get by achieving your goals is not as important as what you become. — Zig Ziglar',
+    'The best time to plant a tree was 20 years ago. The second best time is now. — Chinese Proverb',
+    'Small daily improvements over time lead to stunning results. — Robin Sharma',
+    'Discipline is choosing between what you want now and what you want most. — Abraham Lincoln',
+    'The secret of getting ahead is getting started. — Mark Twain',
+    'Don\'t watch the clock; do what it does. Keep going. — Sam Levenson',
+    'The future depends on what you do today. — Mahatma Gandhi',
+    'Quality is not an act, it is a habit. — Aristotle',
+    'The only impossible journey is the one you never begin. — Tony Robbins',
+    'Do what you can, with what you have, where you are. — Theodore Roosevelt',
+    'Strive not to be a success, but rather to be of value. — Einstein',
+    'Time is what we want most, but what we use worst. — William Penn',
+    'A goal without a plan is just a wish. — Antoine de Saint-Exupéry',
+    'Either you run the day or the day runs you. — Jim Rohn',
+    'The way to get started is to quit talking and begin doing. — Walt Disney',
+    'Don\'t be afraid to give up the good to go for the great. — John D. Rockefeller',
+    'If you can dream it, you can do it. — Walt Disney',
+    'Life is what happens when you\'re busy making other plans. — John Lennon',
+    'The only person you are destined to become is the person you decide to be. — Emerson',
+    'Nothing is impossible. The word itself says \'I\'m possible!\' — Audrey Hepburn',
+    'What lies behind us and what lies before us are tiny matters compared to what lies within us. — Emerson',
+    'Creativity is intelligence having fun. — Einstein',
+    'Happiness is not something ready made. It comes from your own actions. — Dalai Lama',
+    'Be yourself; everyone else is already taken. — Oscar Wilde',
+    'Two roads diverged in a wood, and I took the one less traveled by. — Robert Frost',
+    'You miss 100% of the shots you don\'t take. — Wayne Gretzky',
+    'Whether you think you can or you think you can\'t, you\'re right. — Henry Ford',
+    'The best revenge is massive success. — Frank Sinatra',
+    'I have not failed. I\'ve just found 10,000 ways that won\'t work. — Edison',
+    'A person who never made a mistake never tried anything new. — Einstein',
+    'Try not to become a man of success, but rather try to become a man of value. — Einstein',
+    'Stay hungry, stay foolish. — Steve Jobs',
+    'Simplicity is the ultimate sophistication. — Leonardo da Vinci'
+  ];
+
+  function setDailyQuote() {
+    var today = new Date();
+    // 用年月日作为种子索引，保证每天显示不同名言
+    var daySeed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    var idx = daySeed % QUOTES.length;
+    document.getElementById('dailyQuote').innerHTML = '「 ' + QUOTES[idx] + ' 」<br><span style="font-size:10px;color:#bbb;margin-top:2px;display:inline-block">' + today.getFullYear() + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + String(today.getDate()).padStart(2,'0') + '</span>';
+  }
+
+  // ---- Countdown --------------------------------------------------
+  var countdowns = [];
+  var CD_KEY = 'weekly_countdowns';
+
+  function loadCountdowns() {
+    try {
+      var v = localStorage.getItem(CD_KEY);
+      if (v) countdowns = JSON.parse(v);
+    } catch(e) {}
+    if (!Array.isArray(countdowns)) countdowns = [];
+  }
+  function saveCountdowns() {
+    try { localStorage.setItem(CD_KEY, JSON.stringify(countdowns)); } catch(e) {}
+  }
+
+  // 初始化年月日轮盘
+  function initDatePickers() {
+    var ySel = document.getElementById('cdYear');
+    var mSel = document.getElementById('cdMonth');
+    var dSel = document.getElementById('cdDay');
+    var now = new Date();
+    for (var y = now.getFullYear(); y <= now.getFullYear() + 10; y++) {
+      var opt = document.createElement('option');
+      opt.value = y; opt.textContent = y;
+      ySel.appendChild(opt);
+    }
+    for (var m = 1; m <= 12; m++) {
+      var opt = document.createElement('option');
+      opt.value = m; opt.textContent = m;
+      mSel.appendChild(opt);
+    }
+    for (var d = 1; d <= 31; d++) {
+      var opt = document.createElement('option');
+      opt.value = d; opt.textContent = d;
+      dSel.appendChild(opt);
+    }
+    ySel.value = now.getFullYear();
+    mSel.value = now.getMonth() + 1;
+    dSel.value = now.getDate();
+    // 月份变化时更新天数
+    mSel.addEventListener('change', updateDays);
+    ySel.addEventListener('change', updateDays);
+  }
+  function updateDays() {
+    var y = parseInt(document.getElementById('cdYear').value);
+    var m = parseInt(document.getElementById('cdMonth').value);
+    var dSel = document.getElementById('cdDay');
+    var max = new Date(y, m, 0).getDate();
+    var cur = parseInt(dSel.value);
+    dSel.innerHTML = '';
+    for (var d = 1; d <= max; d++) {
+      var opt = document.createElement('option');
+      opt.value = d; opt.textContent = d;
+      dSel.appendChild(opt);
+    }
+    dSel.value = Math.min(cur, max);
+  }
+
+  // 标题倒计时
+  function updateHeaderCountdown() {
+    var el = document.getElementById('headerCountdown');
+    var today = new Date();
+    today.setHours(0,0,0,0);
+    var nearest = null, nearestDiff = Infinity;
+    countdowns.forEach(function(cd) {
+      var target = new Date(cd.date);
+      target.setHours(0,0,0,0);
+      var diff = Math.floor((target - today) / (1000 * 60 * 60 * 24));
+      if (diff >= 0 && diff < nearestDiff) {
+        nearestDiff = diff;
+        nearest = cd;
+      }
+    });
+    if (nearest) {
+      var d = nearestDiff;
+      el.textContent = '⏰ ' + d + ' days until "' + nearest.text + '"';
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  function renderCountdowns() {
+    var wrap = document.getElementById('countdownWrap');
+    var html = '';
+    var today = new Date();
+    today.setHours(0,0,0,0);
+
+    countdowns.forEach(function(cd, idx) {
+      var target = new Date(cd.date);
+      target.setHours(0,0,0,0);
+      var diff = Math.floor((target - today) / (1000 * 60 * 60 * 24));
+      var label = diff > 0 ? diff + '天' : diff === 0 ? '今天！' : '已过' + Math.abs(diff) + '天';
+      html += '<span class="countdown-tag" data-idx="' + idx + '">';
+      html += '<span class="num">' + label + '</span>';
+      html += escapeHtml(cd.text);
+      html += '<span class="del" data-idx="' + idx + '">✕</span>';
+      html += '</span>';
+    });
+    html += '<span class="countdown-add" id="cdAddBtn">＋</span>';
+    wrap.innerHTML = html;
+
+    // 删除
+    wrap.querySelectorAll('.del').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var idx = parseInt(this.dataset.idx);
+        countdowns.splice(idx, 1);
+        saveCountdowns();
+        renderCountdowns();
+        updateHeaderCountdown();
+      });
+    });
+
+    // 添加（打开带轮盘的模态框）
+    document.getElementById('cdAddBtn').addEventListener('click', function() {
+      document.getElementById('cdModalInput').value = '';
+      document.getElementById('cdModalOverlay').classList.add('show');
+      setTimeout(function() { document.getElementById('cdModalInput').focus(); }, 100);
+    });
+    updateHeaderCountdown();
+  }
+
+  // 倒计时模态框事件
+  document.getElementById('cdModalCancel').addEventListener('click', function() {
+    document.getElementById('cdModalOverlay').classList.remove('show');
+  });
+  document.getElementById('cdModalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('show');
+  });
+  document.getElementById('cdModalInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('cdModalConfirm').click();
+    if (e.key === 'Escape') document.getElementById('cdModalOverlay').classList.remove('show');
+  });
+  document.getElementById('cdModalConfirm').addEventListener('click', function() {
+    var text = document.getElementById('cdModalInput').value.trim();
+    if (!text) { alert('Please enter an event name'); return; }
+    var y = document.getElementById('cdYear').value;
+    var m = document.getElementById('cdMonth').value;
+    var d = document.getElementById('cdDay').value;
+    var dateStr = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    countdowns.push({ text: text, date: dateStr });
+    saveCountdowns();
+    renderCountdowns();
+    document.getElementById('cdModalOverlay').classList.remove('show');
+  });
+
+  // 点击标题倒计时跳转到添加（双击删除最近一个事件）
+  document.getElementById('headerCountdown').addEventListener('dblclick', function() {
+    if (countdowns.length > 0) {
+      countdowns.pop();
+      saveCountdowns();
+      renderCountdowns();
+    }
+  });
+
+  initDatePickers();
+  loadCountdowns();
+  renderCountdowns();
+  // 每分钟刷新
+  setInterval(function() { renderCountdowns(); }, 60000);
+
+  // 保存原 render 逻辑
+  var origSave2 = save;
+  save = function() { origSave2(); saveAlarmState(); };
+  loadAlarmState();
+  setDailyQuote();
+  startAlarm();
+
+  // ---- Electron Integration ---------------------------------------
+  if (window.electronAPI) {
+    // Minimize
+    document.getElementById('minBtn').addEventListener('click', () => {
+      window.electronAPI.minimizeWindow();
+    });
+    // Close (hide to tray)
+    document.getElementById('closeBtn').addEventListener('click', () => {
+      window.electronAPI.closeWindow();
+    });
+    // Toggle pin
+    const pinBtn = document.getElementById('pinBtn');
+    pinBtn.addEventListener('click', async () => {
+      const pinned = await window.electronAPI.togglePin();
+      pinBtn.classList.toggle('pin-on', pinned);
+    });
+    // Listen for pin changes from tray
+    window.electronAPI.onPinChanged((val) => {
+      pinBtn.classList.toggle('pin-on', val);
+    });
+    // Load initial config
+    window.electronAPI.getConfig().then(cfg => {
+      pinBtn.classList.toggle('pin-on', cfg.alwaysOnTop);
+    });
+
+  }
+
+  // ---- Live Clock --------------------------------------------------
+  function updateClock() {
+    var now = new Date();
+    var h = String(now.getHours()).padStart(2,'0');
+    var m = String(now.getMinutes()).padStart(2,'0');
+    var s = String(now.getSeconds()).padStart(2,'0');
+    var weekdays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var day = weekdays[now.getDay()];
+    document.getElementById('liveClock').textContent = day + '  ' + h + ':' + m + ':' + s;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ---- Init -------------------------------------------------------
+  load();
+
+  // ---- Routine Event Bindings -------------------------------------
+  initRoutinePickers();
+  loadRoutineState();
+
+  document.getElementById('routineSwitch').addEventListener('click', function() {
+    routineEnabled = !routineEnabled;
+    this.classList.toggle('on', routineEnabled);
+    var panel = document.getElementById('routinePanel');
+    panel.classList.toggle('open', routineEnabled);
+    saveRoutineState();
+    render();
+  });
+
+  document.getElementById('wakeupHour').addEventListener('change', function() {
+    routineWake = parseInt(this.value);
+    saveRoutineState();
+    render();
+  });
+
+  document.getElementById('sleepHour').addEventListener('change', function() {
+    routineSleep = parseInt(this.value);
+    saveRoutineState();
+    render();
+  });
+
+  // Initial day tab setup
+  dayTabs.addEventListener('click', (e) => {
+    const tab = e.target.closest('.day-tab');
+    if (!tab) return;
+    currentDay = parseInt(tab.dataset.day);
+    render();
+  });
+
+  clearDayBtn.addEventListener('click', () => {
+    const s = stats();
+    if (s.total === 0) return;
+    if (confirm(`Clear all plans for ${DAY_NAMES[currentDay]}?`)) {
+      clearDay(currentDay);
+    }
+  });
+
+  // Keyboard shortcut
+  document.addEventListener('keydown', (e) => {
+    if (e.key >= '1' && e.key <= '7' && !modalOverlay.classList.contains('show')) {
+      const idx = parseInt(e.key) - 1;
+      if (idx >= 0 && idx < 7) {
+        currentDay = idx;
+        render();
+      }
+    }
+  });
+
+  render();
+
+  // Auto-scroll on first render
+  setTimeout(() => {
+    const now = new Date();
+    const todayDay = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    if (currentDay === todayDay) {
+      const nowRow = timelineWrap.querySelector('.hour-row.now');
+      if (nowRow) nowRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }, 100);
+})();
+</script>
+</body>
+</html>

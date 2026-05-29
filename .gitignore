@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.log
+build.js
+install.bat
+start.bat
+console.error(e))
+*.png
