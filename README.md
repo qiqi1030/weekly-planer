@@ -25,4 +25,4 @@ npm install
 
 # 启动应用
 npm start
-<img width="1080" height="1920" alt="d33f987456ab9eca103b0fabd6d25bb6" src="https://github.com/user-attachments/assets/a06c7ad0-ffe5-40c1-b54f-abaa0e410d5b" />
+
